@@ -1,0 +1,18 @@
+{
+    "name": "anki-ai-backend",
+    "version": "1.0.0",
+    "description": "Render-deployable backend API for Anki AI bar actions (explain, step2, ask).",
+    "main": "server.js",
+    "type": "commonjs",
+    "scripts": {
+      "start": "node server.js"
+    },
+    "engines": {
+      "node": ">=18.17.0"
+    },
+    "dependencies": {
+      "cors": "^2.8.5",
+      "express": "^4.21.2"
+    }
+  }
+  
