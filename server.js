@@ -241,14 +241,29 @@ JSON schema:
   if (action === "step2") {
     return {
       instructions: `${sharedRules}
-Task: Create exactly ONE Step 2-style multiple choice question with A-E choices.
-JSON schema:
+Task: Create exactly ONE UWorld-style Step 2 CK practice question based ONLY on the card content.
+
+UWorld/Step2 format requirements:
+- Start with a realistic clinical vignette: age/sex + setting + key symptoms + pertinent positives/negatives.
+- Include focused exam findings and 1–2 key labs/imaging ONLY if they would realistically be available at that moment.
+- Ask a single clear lead-in question (prefer "best next step" / management when appropriate; otherwise diagnosis).
+- All answer choices A–E must be in the SAME CATEGORY (all diagnoses OR all next steps OR all tests OR all treatments).
+- Exactly ONE best answer.
+- Do NOT be Step 1 basic-science heavy; prioritize clinical reasoning and management.
+- Avoid obscure zebras unless the card is explicitly about one.
+
+Rationale requirements:
+- Explain why the correct answer is correct (1–3 sentences).
+- Then briefly explain why EACH wrong option is wrong (one short line per option, labeled A–E).
+- Keep it concise and high-yield.
+
+JSON schema (strict, no markdown):
 {
   "title": "short title",
-  "explanation": "brief setup explanation",
-  "highYieldTakeaways": ["...", "..."],
+  "explanation": "1-3 sentence setup tying the question to the card concept",
+  "highYieldTakeaways": ["3-5 concise bullets"],
   "step2Question": {
-    "stem": "question stem",
+    "stem": "vignette + lead-in question",
     "choices": {
       "A": "...",
       "B": "...",
@@ -257,7 +272,7 @@ JSON schema:
       "E": "..."
     },
     "answer": "A|B|C|D|E",
-    "rationale": "why correct and why others are less correct"
+    "rationale": "Correct: <why>\\nA: <why wrong>\\nB: <why wrong>\\nC: <why wrong>\\nD: <why wrong>\\nE: <why wrong>"
   }
 }`,
       input: contentBlock
