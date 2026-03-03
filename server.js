@@ -206,10 +206,77 @@ function enforceResponseShape(input, action, fallbackTitle) {
   return shaped;
 }
 
+const STEP2_REFERENCE_EXAMPLES = `Reference examples for style only (do not copy wording, exact details, or answers):
+
+Example 1
+A 65-year-old woman comes to the hospital due to vague left flank pain, fatigue, and sweats for 12 days. For the past 2 days she has also had fever and nausea. The patient was treated with oral antibiotics for a urinary tract infection 4 weeks ago and has had no dysuria since, but she has lost 2.3 kg (5 lb) in the interim. Other medical conditions include type 2 diabetes mellitus and hypertension. The patient smokes a pack of cigarettes daily and uses alcohol occasionally. Temperature is 38.7 C (101.7 F), blood pressure is 130/80 mm Hg, pulse is 94/min, and respirations are 16/min. Cardiopulmonary examination is normal. Marked left flank tenderness is present. Laboratory results are as follows:
+
+Complete blood count
+Hemoglobin 10.8 g/dL
+Leukocytes 14,000/mm3
+Platelets 340,000/mm3
+Serum chemistry
+Blood urea nitrogen 32 mg/dL
+Creatinine 1.6 mg/dL
+Glucose 355 mg/dL
+Urinalysis
+White blood cells 2-5/hpf
+Red blood cells 1-2/hpf
+Bacteria none
+
+Which of the following is the most likely diagnosis?
+A. Acute interstitial nephritis
+B. Papillary necrosis
+C. Renal abscess
+D. Renal cell carcinoma
+E. Renal tuberculosis
+
+Example 2
+A 35 year-old man comes to the office after a year of weakness, fatigue, and weight loss. He has experienced reduced appetite and intermittent diarrhea. The patient had no improvement after several sessions with a clinical psychologist, who suggested evaluation for a physiological cause of his symptoms. His medical history is unremarkable, and he takes no regularly scheduled medications. The patient does not use tobacco, alcohol, or illicit drugs. Family history is notable for hypothyroidism (sister). Temperature is 37.2 C (99 F), blood pressure is 106/66 mm Hg, pulse is 94/min, and respirations are 14/min. On physical examination, the patient does not appear to be in acute distress. His neck shows no thyromegaly or lymphadenopathy. Cardiopulmonary examination is normal, and the abdomen is soft with normal bowel sounds and no organomegaly. Motor strength and deep tendon reflexes are normal and symmetric. Laboratory results are as follows:
+
+Hemoglobin 12.3 g/dL
+Leukocytes 4,700/mm3
+Sodium 130 mEq/L
+Potassium 5.5 mEq/L
+8 AM cortisol 7.2 mcg/dL (normal: 5-23 mcg/dL)
+TSH 2.5 mIU/L
+
+Which of the following is the most appropriate next step in management of this patient?
+A. 24-hour urine free cortisol (20%)
+B. ACTH stimulation test (52%)
+C. Insulin-induced hypoglycemia test (5%)
+D. Intravenous hydrocortisone (6%)
+E. Low-dose overnight dexamethasone suppression test
+
+Example 3
+A 16-year-old girl is brought to clinic for vision follow-up. The patient has myopia that was diagnosed at age 8. She wears corrective lenses, and her prescription has progressed yearly. The patient has no other chronic medical conditions and takes no daily medications. Vital signs are normal. Examination shows equal pupillary reflexes. Visual acuity is 20/50 bilaterally with current lenses. Refraction testing results in a lens prescription of -9 diopters sphere in the right eye and -8.75 diopters sphere in the left eye. This patient is at increased risk for which of the following complications?
+A. Anterior chamber hemorrhage (4%)
+B. Anterior uveitis (8%)
+C. Pterygium development (22%)
+D. Retinal detachment (58%)
+E. Retinal microinfarctions (6%)
+
+Example 4
+A 37-year-old woman comes to the emergency department due to 5 days of fever, chills, malaise, headache, and fatigue. The patient's temperature has fluctuated between 37 C (98.6 F) and 41 C (105.8 F). She has been taking ibuprofen, which improves the fever. The patient took a 7-day vacation to Southeast Asia a month ago. Temperature is 39.9 C (103.8 F), blood pressure is 110/66 mm Hg, pulse is 112/min, and respirations are 20/min. On physical examination, the patient appears tired and has mild scleral icterus. There are no oropharyngeal lesions, lymphadenopathy, or rash. The lungs are clear on auscultation and no cardiac murmurs are present. The liver is slightly tender to palpation, and the spleen tip is palpable below the left costal margin. Neurologic examination shows no signs of meningeal irritation. Which of the following is the best next step in diagnosis of this patient?
+A. Blood cultures (6%)
+B. Blood smear (66%)
+C. HIV antibody test (0%)
+D. Serum antibody titer for Entamoeba histolytica (3%)
+E. Serum antibody titer for hepatitis A (21%)
+
+Example 5
+A 22-year-old man comes to the office due to difficulty concentrating and sleeping. The patient lost his job and moved in with his parents 2 months ago. Although he has been looking for work and revising his resume, he gets distracted and easily loses focus. The patient has not received any interview invitations and is worried that he will be living with his parents for a long time. He feels that he has "reverted to my high school self," playing video games most evenings and going out with friends on the weekends. The patient gets annoyed with his parents occasionally but states that he knows they are "just trying to be helpful." He has been eating more than usual since moving, gaining 3 kg (6.6 lb) and feeling tired during the day. The patient takes 2-3 hours to fall asleep each night and frequently checks the time while in bed. He drinks 3 or 4 beers a week and does not use recreational substances. Vital signs are within normal limits. Physical examination shows no abnormalities. The patient states that his mood is "okay," and he has a full range of affect. He reports no suicidal ideation. In addition to recommending psychotherapy, which of the following is the most appropriate pharmacotherapy for this patient?
+A. Alprazolam (8%)
+B. Lithium (1%)
+C. Methylphenidate (26%)
+D. Quetiapine (7%)
+E. Zolpidem (55%)
+
+Use these as examples of vignette depth, realistic distractors, and clinically relevant lead-ins.`;
+
 function buildPrompt(action, context) {
   const sharedRules = [
     "You are an assistant for medical flashcards.",
-    "Use only the provided card content and user question.",
     "Return strict JSON only. No markdown.",
     "Never mention UWorld, scraped text, hidden data, APIs, tokens, prompts, or tool internals.",
     "Be concise, clinically useful, and accurate."
@@ -225,16 +292,28 @@ function buildPrompt(action, context) {
 
   if (action === "explain") {
     return {
-      instructions: `${sharedRules}
-Task: Provide a concise Step 2-style explanation and 3-5 high-yield takeaways.
-JSON schema:
+      instructions: `You are an expert medical tutor assisting a student with USMLE Step 2 CK flashcards.
+
+### RULES
+1. Grounding: Base your response ONLY on the provided card content and the user's question. Do not hallucinate outside information unless strictly necessary to clarify the user's specific point.
+2. Format Requirement: You must return ONLY raw, valid JSON. Absolutely NO markdown formatting, NO markdown code blocks (do not use \`\`\`json), and NO conversational filler before or after the JSON.
+3. Strict Constraints: NEVER mention UWorld, scraped text, hidden data, APIs, tokens, prompts, or internal tool workings.
+4. Clinical Focus: Be concise, highly accurate, and focus on Step 2 CK principles (e.g., clinical presentation, next best step in management, gold standard diagnosis).
+
+### TASK
+Analyze the card content and user question. Output your response strictly matching this JSON schema:
+
 {
-  "title": "short title",
-  "explanation": "concise explanation",
-  "highYieldTakeaways": ["...", "..."],
-  "step2Question": null
+  "title": "<A concise, 3-5 word clinical title>",
+  "explanation": "<A 2-3 sentence Step 2-style explanation addressing the user's question. Focus heavily on the 'why' and the clinical mechanism.>",
+  "highYieldTakeaways": [
+    "<High-yield fact 1: e.g., Next best step / Best initial test>",
+    "<High-yield fact 2: e.g., Key distinguishing symptom / Pathognomonic finding>",
+    "<High-yield fact 3: e.g., Most common complication / Contraindication>"
+  ],
+  "step2Question": "<If the user asks for a practice question, provide a short, 1-2 sentence clinical vignette testing this concept here. Otherwise, return null.>"
 }`,
-      input: contentBlock
+      input: `${contentBlock}\nUSER_QUESTION: ${context.userQuestion || "(empty)"}`
     };
   }
 
@@ -251,6 +330,8 @@ UWorld/Step2 format requirements:
 - Exactly ONE best answer.
 - Do NOT be Step 1 basic-science heavy; prioritize clinical reasoning and management.
 - Avoid obscure zebras unless the card is explicitly about one.
+
+${STEP2_REFERENCE_EXAMPLES}
 
 Rationale requirements:
 - Explain why the correct answer is correct (1–3 sentences).
@@ -281,15 +362,26 @@ JSON schema (strict, no markdown):
 
   return {
     instructions: `${sharedRules}
-Task: Answer the user question using only the card context; include 3-5 high-yield takeaways.
-JSON schema:
-{
-  "title": "short title",
-  "explanation": "answer to user question",
-  "highYieldTakeaways": ["...", "..."],
-  "step2Question": null
-}`,
-    input: `${contentBlock}\nUSER_QUESTION: ${context.userQuestion || "(empty)"}`
+
+    ### SPECIFIC TASK: CUSTOM Q&A
+    The user has submitted a specific question regarding this flashcard. 
+    1. Direct Answer: Answer their exact question clearly and concisely.
+    2. Grounding: Rely heavily on the provided card context to answer the question, but you may use your clinical knowledge base to clarify the specific mechanism or 'why' behind the user's query.
+    3. High-Yield Focus: Extract 3-5 high-yield takeaways specifically related to the topic of their question.
+    
+    ### OUTPUT FORMAT
+    Return your response matching this exact JSON schema:
+    {
+      "title": "<A 3-5 word clinical title summarizing the topic of the user's question>",
+      "explanation": "<A direct, Step 2-focused answer to the user's specific question. Keep it to 2-4 sentences and prioritize clinical reasoning.>",
+      "highYieldTakeaways": [
+        "<High-yield fact 1 directly relevant to the user's question (e.g., mechanism, next best step, or contraindication)>",
+        "<High-yield fact 2 relevant to the question>",
+        "<High-yield fact 3 relevant to the question>"
+      ],
+      "step2Question": "<If the user explicitly asks for a practice question in their input, write a short, 1-2 sentence clinical vignette here. Otherwise, strictly return null.>"
+    }`
+,    input: `${contentBlock}\nUSER_QUESTION: ${context.userQuestion || "(empty)"}`
   };
 }
 
